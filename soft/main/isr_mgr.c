@@ -1,29 +1,40 @@
 #include "isr_mgr.h"
 
 #include "driver/gpio.h"
+#include "esp_timer.h"
 #include "freertos/idf_additions.h"
 #include "util/ints.h"
 
 static struct g {
     isr_callback_t callback;
+    pin_t pins[64];  // map of pins on the chip
     QueueHandle_t event_queue_handle;
     TaskHandle_t task_handle;
 } g;
 
 static void IRAM_ATTR
 gpio_isr_handler(void *arg) {
-    int pin = (int)arg;
+    int pin_number = (int)arg;
 
-    xQueueSendFromISR(g.event_queue_handle, &pin, NULL);
+    xQueueSendFromISR(g.event_queue_handle, &pin_number, NULL);
 }
 
 static void
 task_handle_events(void *arg) {
-    int pin;
+    int pin_number;
 
     while(1) {
-        if(xQueueReceive(g.event_queue_handle, &pin, portMAX_DELAY)) {
+        if(xQueueReceive(g.event_queue_handle, &pin_number, portMAX_DELAY)) {
+            pin_t *pin = &g.pins[pin_number];
+
+            u64 now = esp_timer_get_time();
+            if(pin->debounce_delay_ms > 0 && now - pin->last_intr_us < pin->debounce_delay_ms * 1000) {
+                printf("debounced\n");
+                continue;
+            }
+
             g.callback(pin);
+            g.pins[pin_number].last_intr_us = now;
         }
     }
 }
@@ -40,7 +51,7 @@ isr_mgr_init(isr_callback_t callback) {
     }
 
     // start the task that will react to events, using the default values
-    int success = xTaskCreate(task_handle_events, "handle_events", 2048, NULL, 10, &g.task_handle);
+    int success = xTaskCreate(task_handle_events, "handle_events", 4096, NULL, 10, &g.task_handle);
     if(!success) {
         goto err_queue;
     }
@@ -61,10 +72,10 @@ err:
 }
 
 esp_err_t
-isr_mgr_add_source(int pin, gpio_int_type_t intr, pull_t pull) {
+isr_mgr_add_pin(int pin_number, gpio_int_type_t intr, pull_t pull, int debounce_delay_ms) {
     gpio_config_t conf = {
             .mode = GPIO_MODE_INPUT,
-            .pin_bit_mask = BIT(pin),
+            .pin_bit_mask = 1ULL << pin_number,
             .intr_type = intr,
             .pull_up_en = pull == PULL_UP,
             .pull_down_en = pull == PULL_DOWN,
@@ -75,5 +86,16 @@ isr_mgr_add_source(int pin, gpio_int_type_t intr, pull_t pull) {
         return err;
     }
 
-    return gpio_isr_handler_add(pin, gpio_isr_handler, (void *)pin);
+    err = gpio_isr_handler_add(pin_number, gpio_isr_handler, (void *)pin_number);
+    if(err) {
+        return err;
+    }
+
+    // setup our state for the pin
+    g.pins[pin_number] = (pin_t){
+            .number = pin_number,
+            .debounce_delay_ms = debounce_delay_ms,
+    };
+
+    return ESP_OK;
 }

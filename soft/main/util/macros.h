@@ -1,19 +1,15 @@
 #ifndef MACROS_H
 #define MACROS_H
 
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#define min(a, b) ((a) < (b) ? (a) : (b))
-#define clamp(v, a, b) (max(min((v), (b)), (a)))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define CLAMP(v, a, b) (MAX(MIN((v), (b)), (a)))
 
-#define fequal(f, v) (fabsf((f) - (v)) < 1e-6)
+#define FEQUAL(f, v) (fabsf((f) - (v)) < 1e-6)
 
-#define unused(x) ((void)(x))
-#define todo(x) (assert(0 && "todo"))
+#define UNUSED(x) ((void)(x))
+#define TODO(x) (assert(0 && "todo"))
 
-#define container_of(ptr, type, member)                                        \
-  (type *)((char *)(ptr) - offsetof(type, member))
-
-#define str_starts_with(s, t) (strncmp(s, t, strlen(t)))
-#define array_lit_len(a) (sizeof(a) / sizeof(a[0]))
+#define CONTAINER_OF(ptr, type, member) (type *)((char *)(ptr) - offsetof(type, member))
 
 #endif

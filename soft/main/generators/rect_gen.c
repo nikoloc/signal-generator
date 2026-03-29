@@ -1,34 +1,29 @@
 #include "rect_gen.h"
 
-#include "driver/gpio.h"
 #include "driver/ledc.h"
+#include "gen.h"
+#include "util/macros.h"
 
 static inline bool
-verify_params(u32 freq, u8 ampl, u8 duty) {
-    return freq > 0 && ampl > 0 && ampl < 128 && duty > 0;
+verify_params(u32 freq, float duty) {
+    return freq > 0 && duty >= 0 && duty <= 1;
 }
 
-esp_err_t
-rect_gen_init(rect_gen_t *gen, u32 freq, u8 ampl, u8 duty) {
-    if(!verify_params(freq, ampl, duty)) {
+static esp_err_t
+rect_gen_start(gen_t *base_gen, gen_params_t *params) {
+    if(!verify_params(params->freq, params->duty)) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    gen->freq = freq;
-    gen->ampl = ampl;
-    gen->duty = duty;
-
-    esp_err_t err = ESP_OK;
 
     ledc_timer_config_t timer_conf = {
             .speed_mode = LEDC_LOW_SPEED_MODE,
             .timer_num = LEDC_TIMER_0,
             .duty_resolution = LEDC_TIMER_8_BIT,
-            .freq_hz = freq,
+            .freq_hz = params->freq,
             .clk_cfg = LEDC_AUTO_CLK,
     };
 
-    err = ledc_timer_config(&timer_conf);
+    esp_err_t err = ledc_timer_config(&timer_conf);
     if(err) {
         return err;
     }
@@ -38,7 +33,7 @@ rect_gen_init(rect_gen_t *gen, u32 freq, u8 ampl, u8 duty) {
             .channel = LEDC_CHANNEL_0,
             .timer_sel = LEDC_TIMER_0,
             .gpio_num = 25,
-            .duty = duty,
+            .duty = CLAMP(params->duty * params->duty, 0, 255),
             .hpoint = 0,
     };
 
@@ -47,16 +42,20 @@ rect_gen_init(rect_gen_t *gen, u32 freq, u8 ampl, u8 duty) {
         return err;
     }
 
-    err = ledc_set_freq(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, freq);
-    if(err) {
-        return err;
-    }
-
     return ESP_OK;
 }
 
+static esp_err_t
+rect_gen_stop(gen_t *base_gen) {
+    return ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
+}
+
+static const gen_interface_t rect_gen_impl = {
+        .start = rect_gen_start,
+        .stop = rect_gen_stop,
+};
+
 void
-rect_gen_deinit(rect_gen_t *gen) {
-    ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
-    gpio_reset_pin(25);
+rect_gen_init(rect_gen_t *gen) {
+    gen_init(&gen->base_gen, &rect_gen_impl);
 }

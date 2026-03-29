@@ -1,2 +1,12 @@
-idf_component_register(SRCS "main.c" "cosine_gen_hw.c" "sine_gen.c" "rect_gen.c" "gen.c" "isr_mgr.c"
-                    INCLUDE_DIRS ".")
+set(SRCS
+    main.c
+    isr_mgr.c
+    generators/gen.c
+    generators/sine_gen.c
+    generators/rect_gen.c
+    generators/dac_dma_gen.c
+    generators/triangle_gen.c
+)
+
+idf_component_register(SRCS ${SRCS}
+                       INCLUDE_DIRS ".")
