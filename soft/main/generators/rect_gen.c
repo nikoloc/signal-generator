@@ -6,12 +6,34 @@
 #include "gen.h"
 #include "main.h"
 
+// static u32
+// verify_params(gen_params_t *params) {
+//     u32 ret = GEN_ERROR_NONE;
+//     if(params->freq < 10) {
+//         ret |= GEN_ERROR_FREQ;
+//     }
+
+//     if(params->symmetry < 0 || params->symmetry > 1) {
+//         ret |= GEN_ERROR_SYMMETRY;
+//     }
+
+//     if(params->offset > 12 || params->offset < -12) {
+//         ret |= GEN_ERROR_OFFSET;
+//     }
+
+//     return ret;
+// }
+
 static u32
 rect_gen_start(gen_t *base_gen, gen_params_t *params) {
     u32 err = GEN_ERROR_NONE;
 
     // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-
+    // u32 err = verify_params(params);
+    //     if(err) {
+    //         return err;
+    //     }
+    //
     ledc_timer_config_t timer_conf = {
                 .speed_mode = LEDC_HIGH_SPEED_MODE,
                 .timer_num = LEDC_TIMER_0,
