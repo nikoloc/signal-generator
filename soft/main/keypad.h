@@ -2,7 +2,6 @@
 #define KEYPAD_H
 
 typedef enum key {
-    KEY_NONE = -1,
     KEY_0 = 0,
     KEY_1,
     KEY_2,
