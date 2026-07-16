@@ -5,41 +5,48 @@
 #include "driver/ledc.h"
 #include "gen.h"
 #include "main.h"
+#include "util/constants.h"
+#include "util/macros.h"
 
-// static u32
-// verify_params(gen_params_t *params) {
-//     u32 ret = GEN_ERROR_NONE;
-//     if(params->freq < 10) {
-//         ret |= GEN_ERROR_FREQ;
-//     }
+static u32
+verify_params(gen_params_t *params) {
+    u32 ret = GEN_ERROR_NONE;
 
-//     if(params->symmetry < 0 || params->symmetry > 1) {
-//         ret |= GEN_ERROR_SYMMETRY;
-//     }
+    if(params->freq < MIN_RECT_FREQ || params->freq > MAX_RECT_FREQ) {
+        ret |= GEN_ERROR_FREQ;
+    }
 
-//     if(params->offset > 12 || params->offset < -12) {
-//         ret |= GEN_ERROR_OFFSET;
-//     }
+    if(params->symmetry < 0 || params->symmetry > 1) {
+        ret |= GEN_ERROR_SYMMETRY;
+    }
 
-//     return ret;
-// }
+    if(params->offset < MIN_OFFSET || params->offset > MAX_OFFSET) {
+        ret |= GEN_ERROR_OFFSET;
+    }
+
+    return ret;
+}
+
+static u32
+rect_gen_probe(gen_t *base_gen, gen_params_t *params) {
+    UNUSED(base_gen);
+
+    return verify_params(params);
+}
 
 static u32
 rect_gen_start(gen_t *base_gen, gen_params_t *params) {
-    u32 err = GEN_ERROR_NONE;
+    u32 err = verify_params(params);
+    if(err) {
+        return err;
+    }
 
-    // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-    // u32 err = verify_params(params);
-    //     if(err) {
-    //         return err;
-    //     }
-    //
     ledc_timer_config_t timer_conf = {
-                .speed_mode = LEDC_HIGH_SPEED_MODE,
-                .timer_num = LEDC_TIMER_0,
-                .duty_resolution = LEDC_TIMER_8_BIT,
-                .freq_hz = params->freq,
-                .clk_cfg = LEDC_AUTO_CLK,
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .timer_num = LEDC_TIMER_0,
+            .duty_resolution = LEDC_TIMER_8_BIT,
+            .freq_hz = params->freq,
+            .clk_cfg = LEDC_AUTO_CLK,
     };
 
     err = ledc_timer_config(&timer_conf);
@@ -70,6 +77,7 @@ rect_gen_stop(gen_t *base_gen) {
 }
 
 static const gen_interface_t rect_gen_impl = {
+        .probe = rect_gen_probe,
         .start = rect_gen_start,
         .stop = rect_gen_stop,
 };

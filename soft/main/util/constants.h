@@ -3,11 +3,14 @@
 
 #define VDD (3.3f)
 #define MAX_OFFSET (12)
+#define MIN_OFFSET (-12)
+
+// test these values
 #define MAX_SINE_FREQ (100000)
-#define MIN_SIN_FREQ (150) // Testirati
+#define MIN_SINE_FREQ (150)
 #define MAX_RECT_FREQ (2000000)
-#define MIN_RECT_FREQ (10) // ?
+#define MIN_RECT_FREQ (10)
 #define MAX_TRI_FREQ (30000)
-#define MIN_TRI_FREQ (100) // ?
+#define MIN_TRI_FREQ (100)
 
 #endif

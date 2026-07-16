@@ -2,35 +2,39 @@
 
 #include <inttypes.h>
 
+#include "util/constants.h"
 #include "util/macros.h"
 
-// static u32
-// verify_params(gen_params_t *params) {
-//     u32 ret = GEN_ERROR_NONE;
+static u32
+verify_params(gen_params_t *params) {
+    u32 ret = GEN_ERROR_NONE;
 
-//     printf("frekvencija %" PRIi32 "\n", params->freq);
-//     if(params->freq < 10) {
-//         printf("kako bre ovo\n");
-//         ret |= GEN_ERROR_FREQ;
-//     }
+    if(params->freq < MIN_SINE_FREQ || params->freq > MAX_SINE_FREQ) {
+        ret |= GEN_ERROR_FREQ;
+    }
 
-//     if(params->offset > 12 || params->offset < -12) {
-//         ret |= GEN_ERROR_OFFSET;
-//     }
+    if(params->offset < MIN_OFFSET || params->offset > MAX_OFFSET) {
+        ret |= GEN_ERROR_OFFSET;
+    }
 
-//     return ret;
-// }
+    return ret;
+}
+
+static u32
+sine_gen_probe(gen_t *base_gen, gen_params_t *params) {
+    UNUSED(base_gen);
+
+    return verify_params(params);
+}
 
 static u32
 sine_gen_start(gen_t *base_gen, gen_params_t *params) {
-    u32 err = GEN_ERROR_NONE;
     sine_gen_t *gen = CONTAINER_OF(base_gen, sine_gen_t, base_gen);
 
-    // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-    // u32 err = verify_params(params);
-    //     if(err) {
-    //         return err;
-    //     }
+    u32 err = verify_params(params);
+    if(err) {
+        return err;
+    }
 
     dac_cosine_config_t conf = {
             .chan_id = DAC_CHAN_0,
@@ -38,12 +42,17 @@ sine_gen_start(gen_t *base_gen, gen_params_t *params) {
             .phase = DAC_COSINE_PHASE_0,
     };
 
-    err = dac_cosine_new_channel(&conf, &gen->dac_handle);
-    if(err) {
-        return err;
+    esp_err_t esp_err = dac_cosine_new_channel(&conf, &gen->dac_handle);
+    if(esp_err) {
+        return GEN_ERROR_UNKNOWN;
     }
 
-    return dac_cosine_start(gen->dac_handle);
+    esp_err = dac_cosine_start(gen->dac_handle);
+    if(esp_err) {
+        return GEN_ERROR_UNKNOWN;
+    }
+
+    return GEN_ERROR_NONE;
 }
 
 static esp_err_t
@@ -59,6 +68,7 @@ sine_gen_stop(gen_t *base_gen) {
 }
 
 static const gen_interface_t sine_gen_impl = {
+        .probe = sine_gen_probe,
         .start = sine_gen_start,
         .stop = sine_gen_stop,
 };
