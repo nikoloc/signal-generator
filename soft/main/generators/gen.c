@@ -9,18 +9,19 @@ gen_init(gen_t *gen, const gen_interface_t *impl) {
 }
 
 u32
+gen_probe(gen_t *gen, gen_params_t *params) {
+    return gen->impl->probe(gen, params);
+}
+
+u32
 gen_start(gen_t *gen, gen_params_t *params) {
+    // reset the output pin before starting the generator
     u32 err = gpio_reset_pin(O_SIGNAL);
     if(err) {
-        return err;
+        return GEN_ERROR_UNKNOWN;
     }
 
-    err = gen->impl->start(gen, params);
-    if(err) {
-        return err;
-    }
-
-    return GEN_ERROR_NONE;
+    return gen->impl->start(gen, params);
 }
 
 esp_err_t

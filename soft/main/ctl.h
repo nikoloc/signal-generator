@@ -16,8 +16,7 @@ extern const char *ctl_signal_type_to_string[_CTL_SIGNAL_TYPE_COUNT];
 void
 ctl_init(void);
 
-// returns errors if any
-u32
+esp_err_t
 ctl_enable(ctl_signal_type_t type, gen_params_t *params);
 
 void
