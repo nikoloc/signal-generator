@@ -16,7 +16,8 @@
     do {                                                                                   \
         if(!(expr)) {                                                                      \
             fprintf(stderr, "[%s, %d] assertion failed: %s\n", __FILE__, __LINE__, #expr); \
-            __builtin_trap();                                                              \
+            while(1) {                                                                     \
+            }                                                                              \
         }                                                                                  \
     } while(0)
 #else
@@ -26,7 +27,7 @@
 #endif
 
 #define UNUSED(x) ((void)(x))
-#define TODO(x) (ASSERT(0 && x))
+#define TODO(x) ASSERT(0 && x)
 #define UNREACHABLE() (__builtin_unreachable())
 
 #define CONTAINER_OF(ptr, type, member) (type *)((char *)(ptr) - offsetof(type, member))
