@@ -8,7 +8,7 @@
 #include "soc/soc.h"
 #include "ui.h"
 
-const char *TAG = "MAIN";
+static const char *TAG = "MAIN";
 
 static void
 init_display(void) {

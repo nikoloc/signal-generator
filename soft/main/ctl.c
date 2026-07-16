@@ -6,7 +6,7 @@
 #include "generators/triangle_gen.h"
 #include "util/macros.h"
 
-static const char *tag = "CTL";
+static const char *TAG = "CTL";
 
 const char *ctl_signal_type_to_string[] = {
         [CTL_SIGNAL_TYPE_SINE] = "sine",
@@ -44,7 +44,7 @@ ctl_enable(ctl_signal_type_t type, gen_params_t *params) {
 
     gen_t *gen = g.signal_type_to_gen[type];
 
-    ESP_LOGI(tag, "starting %s generator with parametars - freq: %" PRIi32 ", symmetry: %.2f, offset: %0.2f",
+    ESP_LOGI(TAG, "starting %s generator with parametars - freq: %" PRIi32 ", symmetry: %.2f, offset: %0.2f",
             ctl_signal_type_to_string[type], params->freq, params->symmetry, params->offset);
 
     if(type == CTL_SIGNAL_TYPE_SINE) {
@@ -54,16 +54,23 @@ ctl_enable(ctl_signal_type_t type, gen_params_t *params) {
 
     u32 err = gen_start(gen, params);
     if(err) {
-        ESP_LOGE(tag, "generator error: %" PRIu32, err);
+        ESP_LOGE(TAG, "generator error: %" PRIu32, err);
         return err;
     }
 
-    ESP_LOGI(tag, "started generator successfully");
+    ESP_LOGI(TAG, "started generator successfully");
 
     g.enabled = true;
     g.type = type;
 
     return GEN_ERROR_NONE;
+}
+
+u32
+ctl_probe(ctl_signal_type_t type, gen_params_t *params) {
+    gen_t *gen = g.signal_type_to_gen[type];
+
+    return gen_probe(gen, params);
 }
 
 void
@@ -76,7 +83,12 @@ ctl_disable(void) {
         return;
     }
 
-    ESP_LOGI(tag, "generator stopped");
+    ESP_LOGI(TAG, "generator stopped");
 
     g.enabled = false;
+}
+
+bool
+ctl_is_enabled(void) {
+    return g.enabled;
 }

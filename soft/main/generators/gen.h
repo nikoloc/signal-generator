@@ -8,7 +8,7 @@
 // `dac_dma_gen.h`, `triangle_gen.h` `rect_gen.h` and `sine_gen.h` and appropriate sources for references
 
 typedef struct gen_params {
-    i32 freq;
+    int freq;
     float offset;
     float symmetry;
 } gen_params_t;

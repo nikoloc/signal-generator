@@ -18,7 +18,13 @@ ctl_init(void);
 u32
 ctl_enable(ctl_signal_type_t type, gen_params_t *params);
 
+u32
+ctl_probe(ctl_signal_type_t type, gen_params_t *params);
+
 void
 ctl_disable(void);
+
+bool
+ctl_is_enabled(void);
 
 #endif
