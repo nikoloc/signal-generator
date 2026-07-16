@@ -9,10 +9,10 @@
 #include "util/macros.h"
 
 const u32 adjustement_vals[4][2] = {
-    {}, // Because we index this with CLT_SIGNAL_... and CTL_SIGNAL_NONE = 0
-    {MIN_SIN_FREQ, MAX_SINE_FREQ},
-    {MIN_RECT_FREQ, MAX_RECT_FREQ},
-    {MIN_TRI_FREQ, MAX_TRI_FREQ},
+        {},  // Because we index this with CLT_SIGNAL_... and CTL_SIGNAL_NONE = 0
+        {MIN_SIN_FREQ, MAX_SINE_FREQ},
+        {MIN_RECT_FREQ, MAX_RECT_FREQ},
+        {MIN_TRI_FREQ, MAX_TRI_FREQ},
 };
 
 typedef enum ui_menu {
@@ -33,12 +33,12 @@ typedef enum adjusted_param {
     ADJ_NONE,
 } adjusted_param_t;
 
-const char* adj_param_to_string[] = {
-    [ADJ_MIN] = "min",
-    [ADJ_MAX] = "max",
-    [ADJ_FREQ] = "frequency",
-    [ADJ_SYMM] = "symmetry",
-    [ADJ_OFF] = "offset",
+const char *adj_param_to_string[] = {
+        [ADJ_MIN] = "min",
+        [ADJ_MAX] = "max",
+        [ADJ_FREQ] = "frequency",
+        [ADJ_SYMM] = "symmetry",
+        [ADJ_OFF] = "offset",
 };
 
 static struct g {
@@ -76,10 +76,8 @@ go_home(void) {
 
 void
 ui_init(void) {
-    g.type = CTL_SIGNAL_TYPE_SINE;
     go_home();
 }
-
 
 static void
 handle_digit(i32 d) {
@@ -107,7 +105,7 @@ handle_digit(i32 d) {
         } else {
             g.pending.whole = g.pending.whole * 10 + d;
         }
-        if (!d) {
+        if(!d) {
             g.pending.zero = true;
         }
     }
@@ -116,12 +114,12 @@ handle_digit(i32 d) {
 static void
 print_decimal() {
     float value = g.pending.sign * (g.pending.whole + g.pending.frac / pow(10, g.pending.frac_count));
-    lcd_tprintf(1, 0, ">%c", (g.pending.sign < 0) ? '-':' ');
+    lcd_tprintf(1, 0, ">%c", (g.pending.sign < 0) ? '-' : ' ');
 
-    if (value || g.pending.zero) {
-        if (g.pending.frac_count == 0) {
+    if(value || g.pending.zero) {
+        if(g.pending.frac_count == 0) {
             lcd_tprintf(1, 2, "%d%s", (value < 0) ? ((i32)-value) : ((i32)value), (g.pending.dot) ? "." : "");
-        } else if (g.pending.frac_count == 1) {
+        } else if(g.pending.frac_count == 1) {
             lcd_tprintf(1, 2, "%.1f", (value < 0) ? (-value) : (value));
         } else {
             lcd_tprintf(1, 2, "%.2f", (value < 0) ? (-value) : (value));
@@ -133,12 +131,12 @@ print_decimal() {
 
 static void
 verify_freq() {
-    if (g.params.freq < adjustement_vals[g.type][0]) {
+    if(g.params.freq < adjustement_vals[g.type][0]) {
         g.params.freq = adjustement_vals[g.type][0];
         g.adj_m = ADJ_MIN;
         g.adj_fso = ADJ_FREQ;
         g.menu = UI_MENU_CHANGED_PARAM;
-    } else if (g.params.freq > adjustement_vals[g.type][1]) {
+    } else if(g.params.freq > adjustement_vals[g.type][1]) {
         g.params.freq = adjustement_vals[g.type][1];
         g.adj_m = ADJ_MAX;
         g.adj_fso = ADJ_FREQ;
@@ -151,12 +149,12 @@ verify_freq() {
 
 static void
 verify_offset() {
-    if (g.params.offset < -MAX_OFFSET) {
+    if(g.params.offset < -MAX_OFFSET) {
         g.params.offset = -MAX_OFFSET;
         g.adj_m = ADJ_MIN;
         g.adj_fso = ADJ_OFF;
         g.menu = UI_MENU_CHANGED_PARAM;
-    } else if (g.params.offset > MAX_OFFSET) {
+    } else if(g.params.offset > MAX_OFFSET) {
         g.params.offset = MAX_OFFSET;
         g.adj_m = ADJ_MAX;
         g.adj_fso = ADJ_OFF;
@@ -169,12 +167,12 @@ verify_offset() {
 
 static void
 verify_symmetry() {
-    if (g.params.symmetry < 0) {
+    if(g.params.symmetry < 0) {
         g.params.symmetry = 0;
         g.adj_m = ADJ_MIN;
         g.adj_fso = ADJ_SYMM;
         g.menu = UI_MENU_CHANGED_PARAM;
-    } else if (g.params.symmetry > 1) {
+    } else if(g.params.symmetry > 1) {
         g.params.symmetry = 1;
         g.adj_m = ADJ_MAX;
         g.adj_fso = ADJ_SYMM;
@@ -185,21 +183,19 @@ verify_symmetry() {
     }
 }
 
-
-static void // Sorry ako je nepregledno, al poenta je da samo jedna funkcija moze svaki "error" da ispise
+static void  // Sorry ako je nepregledno, al poenta je da samo jedna funkcija moze svaki "error" da ispise
 ui_adjusted_param_screen() {
     lcd_tprintf(0, 0, "%s %s", adj_param_to_string[g.adj_m], adj_param_to_string[g.adj_fso]);
     lcd_tprintf(1, 0, "for %s is", ctl_signal_type_to_string[g.type]);
-    if (g.adj_fso == ADJ_FREQ) {
+    if(g.adj_fso == ADJ_FREQ) {
         lcd_tprintf(2, 0, "%d", adjustement_vals[g.type][g.adj_m]);
-    } else if (g.adj_fso == ADJ_OFF) {
+    } else if(g.adj_fso == ADJ_OFF) {
         lcd_tprintf(2, 0, "%d", (g.adj_m == ADJ_MIN) ? -12 : 12);
-    } else if (g.adj_fso == ADJ_SYMM) {
+    } else if(g.adj_fso == ADJ_SYMM) {
         lcd_tprintf(2, 0, "%d", (g.adj_m == ADJ_MIN) ? 0 : 1);
     }
     lcd_tprintf(3, 0, "Click OK to adj");
 }
-
 
 void
 ui_render(void) {
@@ -210,7 +206,7 @@ ui_render(void) {
             lcd_tprintf(0, 0, "1.type:%s", ctl_signal_type_to_string[g.type]);
             lcd_tprintf(1, 0, "2.freq:%" PRIi32, g.params.freq);
             lcd_tprintf(2, 0, "3.offs:%.2f", g.params.offset);
-            if (g.type != CTL_SIGNAL_TYPE_SINE) {
+            if(g.type != CTL_SIGNAL_TYPE_SINE) {
                 lcd_tprintf(3, 0, "4.sim:%.2f", g.params.symmetry);
             }
             break;
@@ -227,7 +223,7 @@ ui_render(void) {
         case UI_MENU_FREQ: {
             lcd_tprintf(0, 0, "type frequency");
             lcd_tprintf(1, 0, "> ", g.pending.whole);
-            if (g.pending.whole) {
+            if(g.pending.whole) {
                 lcd_tprintf(1, 2, "%d", g.pending.whole);
             }
 
@@ -247,7 +243,6 @@ ui_render(void) {
             print_decimal();
 
             break;
-
         }
         case UI_MENU_CHANGED_PARAM: {
             ui_adjusted_param_screen();
@@ -283,7 +278,7 @@ ui_handle_key(key_t key) {
         case KEY_OK: {
             if(g.menu == UI_MENU_FREQ) {
                 g.params.freq = g.pending.whole;
-                verify_freq(); // Prvo ovde verifikujemo vrednosti i clampujemo ih ako treba
+                verify_freq();  // Prvo ovde verifikujemo vrednosti i clampujemo ih ako treba
             } else if(g.menu == UI_MENU_OFFSET) {
                 // double check this
                 g.params.offset = g.pending.sign * (g.pending.whole + g.pending.frac / pow(10, g.pending.frac_count));

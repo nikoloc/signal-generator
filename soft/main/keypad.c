@@ -5,7 +5,7 @@
 #include "freertos/task.h"
 #include "main.h"
 #include "ui.h"
-#include "util/ints.h"
+#include "util/macros.h"
 
 // TODO: wrap this state into g struct, i am lazy to do it now
 static const gpio_num_t rows[4] = {
@@ -22,8 +22,6 @@ static const gpio_num_t cols[4] = {
         I_KEYPAD_COL_3,
 };
 
-static volatile i32 current_pulse_row_idx = 0;
-
 // export this keymap
 const key_t keymap[4][4] = {
         {KEY_7, KEY_8, KEY_9, KEY_ENABLE},
@@ -37,7 +35,6 @@ task(void *data) {
     while(1) {
         // go through all the pins, pull them low for a brief second, and check for column pins.
         for(size_t i = 0; i < 4; i++) {
-            current_pulse_row_idx = i;
             gpio_set_level(rows[i], 0);
             vTaskDelay(pdMS_TO_TICKS(5));
 
@@ -75,5 +72,6 @@ keypad_init(void) {
         ESP_ERROR_CHECK(gpio_set_pull_mode(cols[i], GPIO_PULLUP_ONLY));
     }
 
-    assert(xTaskCreate(task, "keypad-and-ui", 8192, NULL, 3, NULL));
+    int success = xTaskCreate(task, "keypad-and-ui", 8192, NULL, 3, NULL);
+    ASSERT(success);
 }

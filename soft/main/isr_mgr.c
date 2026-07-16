@@ -29,7 +29,6 @@ task_handle_events(void *arg) {
 
             u64 now = esp_timer_get_time();
             if(pin->debounce_delay_ms > 0 && now - pin->last_intr_us < pin->debounce_delay_ms * 1000) {
-                printf("debounced\n");
                 continue;
             }
 
