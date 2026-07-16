@@ -14,3 +14,5 @@ set(SRCS
 
 idf_component_register(SRCS ${SRCS}
                        INCLUDE_DIRS ".")
+
+target_compile_definitions(${COMPONENT_LIB} PRIVATE -DDEBUG)

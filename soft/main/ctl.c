@@ -1,16 +1,14 @@
 #include "ctl.h"
 
-#include "driver/gpio.h"
 #include "esp_log.h"
 #include "generators/rect_gen.h"
 #include "generators/sine_gen.h"
 #include "generators/triangle_gen.h"
-#include "main.h"
+#include "util/macros.h"
 
 static const char *tag = "CTL";
 
 const char *ctl_signal_type_to_string[] = {
-        [CTL_SIGNAL_TYPE_NONE] = "none",
         [CTL_SIGNAL_TYPE_SINE] = "sine",
         [CTL_SIGNAL_TYPE_RECT] = "rect",
         [CTL_SIGNAL_TYPE_TRIANGLE] = "tri",
@@ -42,30 +40,29 @@ ctl_init(void) {
 
 u32
 ctl_enable(ctl_signal_type_t type, gen_params_t *params) {
-    assert(!g.enabled);
+    ASSERT(!g.enabled);
 
-    if(type == CTL_SIGNAL_TYPE_NONE) {
-        return GEN_ERROR_UNKNOWN;
-    }
-
-    // reset the pin just to be sure
-    gpio_reset_pin(O_SIGNAL);
     gen_t *gen = g.signal_type_to_gen[type];
 
     ESP_LOGI(tag, "starting %s generator with parametars - freq: %" PRIi32 ", symmetry: %.2f, offset: %0.2f",
             ctl_signal_type_to_string[type], params->freq, params->symmetry, params->offset);
-    if (type == CTL_SIGNAL_TYPE_SINE) {
+
+    if(type == CTL_SIGNAL_TYPE_SINE) {
+        // NOTE: why would we even care here?
         params->symmetry = 0.5;
     }
+
     u32 err = gen_start(gen, params);
     if(err) {
-        ESP_LOGI(tag, "generator error: %" PRIu32, err);
+        ESP_LOGE(tag, "generator error: %" PRIu32, err);
         return err;
     }
 
     ESP_LOGI(tag, "started generator successfully");
+
     g.enabled = true;
     g.type = type;
+
     return GEN_ERROR_NONE;
 }
 
@@ -73,12 +70,13 @@ void
 ctl_disable(void) {
     gen_t *current = g.signal_type_to_gen[g.type];
 
-    ESP_LOGI(tag, "generator stopped");
     esp_err_t err = gen_stop(current);
     if(err) {
-        // TODO: better error handling here, currently we get into a situation where nothing is handled as it should be
+        // TODO: better error handling here
         return;
     }
+
+    ESP_LOGI(tag, "generator stopped");
 
     g.enabled = false;
 }
