@@ -15,16 +15,12 @@
 //
 // see the reference usage for the triangle signal generation
 
-typedef struct dac_dma_gen_interface {
-    // should return bitmask of errors if the params are not good
-    u32 (*verify_params)(gen_params_t *params);
-    u32 (*generate_points)(u8 *buffer, u32 count, gen_params_t *params);
-} dac_dma_gen_interface_t;
+typedef esp_err_t (*dac_dma_generate_points_func_t)(u8 *buffer, u32 count, int freq, float symmetry);
 
 typedef struct dac_dma_gen {
     gen_t base_gen;
 
-    const dac_dma_gen_interface_t *impl;
+    dac_dma_generate_points_func_t generate_points;
 
     u8 buffer[DAC_DMA_GEN_BUFFER_SIZE];
 
@@ -32,6 +28,6 @@ typedef struct dac_dma_gen {
 } dac_dma_gen_t;
 
 void
-dac_dma_gen_init(dac_dma_gen_t *gen, const dac_dma_gen_interface_t *impl);
+dac_dma_gen_init(dac_dma_gen_t *gen, dac_dma_generate_points_func_t generate_points);
 
 #endif

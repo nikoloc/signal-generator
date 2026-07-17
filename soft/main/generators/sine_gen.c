@@ -5,54 +5,30 @@
 #include "util/constants.h"
 #include "util/macros.h"
 
-static u32
-verify_params(gen_params_t *params) {
-    u32 ret = GEN_ERROR_NONE;
+static esp_err_t
+sine_gen_start(gen_t *base_gen, int freq, float symmetry) {
+    UNUSED(symmetry);
+    ASSERT(freq >= MIN_SINE_FREQ && freq <= MAX_SINE_FREQ);
 
-    if(params->freq < MIN_SINE_FREQ || params->freq > MAX_SINE_FREQ) {
-        ret |= GEN_ERROR_FREQ;
-    }
-
-    if(params->offset < MIN_OFFSET || params->offset > MAX_OFFSET) {
-        ret |= GEN_ERROR_OFFSET;
-    }
-
-    return ret;
-}
-
-static u32
-sine_gen_probe(gen_t *base_gen, gen_params_t *params) {
-    UNUSED(base_gen);
-
-    return verify_params(params);
-}
-
-static u32
-sine_gen_start(gen_t *base_gen, gen_params_t *params) {
     sine_gen_t *gen = CONTAINER_OF(base_gen, sine_gen_t, base_gen);
 
-    u32 err = verify_params(params);
+    dac_cosine_config_t conf = {
+            .chan_id = DAC_CHAN_0,
+            .freq_hz = freq,
+            .phase = DAC_COSINE_PHASE_0,
+    };
+
+    esp_err_t err = dac_cosine_new_channel(&conf, &gen->dac_handle);
     if(err) {
         return err;
     }
 
-    dac_cosine_config_t conf = {
-            .chan_id = DAC_CHAN_0,
-            .freq_hz = params->freq,
-            .phase = DAC_COSINE_PHASE_0,
-    };
-
-    esp_err_t esp_err = dac_cosine_new_channel(&conf, &gen->dac_handle);
-    if(esp_err) {
-        return GEN_ERROR_UNKNOWN;
+    err = dac_cosine_start(gen->dac_handle);
+    if(err) {
+        return err;
     }
 
-    esp_err = dac_cosine_start(gen->dac_handle);
-    if(esp_err) {
-        return GEN_ERROR_UNKNOWN;
-    }
-
-    return GEN_ERROR_NONE;
+    return ESP_OK;
 }
 
 static esp_err_t
@@ -68,7 +44,6 @@ sine_gen_stop(gen_t *base_gen) {
 }
 
 static const gen_interface_t sine_gen_impl = {
-        .probe = sine_gen_probe,
         .start = sine_gen_start,
         .stop = sine_gen_stop,
 };

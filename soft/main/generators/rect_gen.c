@@ -8,50 +8,22 @@
 #include "util/constants.h"
 #include "util/macros.h"
 
-static u32
-verify_params(gen_params_t *params) {
-    u32 ret = GEN_ERROR_NONE;
-
-    if(params->freq < MIN_RECT_FREQ || params->freq > MAX_RECT_FREQ) {
-        ret |= GEN_ERROR_FREQ;
-    }
-
-    if(params->symmetry < 0 || params->symmetry > 1) {
-        ret |= GEN_ERROR_SYMMETRY;
-    }
-
-    if(params->offset < MIN_OFFSET || params->offset > MAX_OFFSET) {
-        ret |= GEN_ERROR_OFFSET;
-    }
-
-    return ret;
-}
-
-static u32
-rect_gen_probe(gen_t *base_gen, gen_params_t *params) {
-    UNUSED(base_gen);
-
-    return verify_params(params);
-}
-
-static u32
-rect_gen_start(gen_t *base_gen, gen_params_t *params) {
-    u32 err = verify_params(params);
-    if(err) {
-        return err;
-    }
+static esp_err_t
+rect_gen_start(gen_t *base_gen, int freq, float symmetry) {
+    ASSERT(freq >= MIN_RECT_FREQ && freq <= MAX_RECT_FREQ);
+    ASSERT(symmetry >= 0 && symmetry <= 1);
 
     ledc_timer_config_t timer_conf = {
             .speed_mode = LEDC_HIGH_SPEED_MODE,
             .timer_num = LEDC_TIMER_0,
             .duty_resolution = LEDC_TIMER_8_BIT,
-            .freq_hz = params->freq,
+            .freq_hz = freq,
             .clk_cfg = LEDC_AUTO_CLK,
     };
 
-    err = ledc_timer_config(&timer_conf);
+    esp_err_t err = ledc_timer_config(&timer_conf);
     if(err) {
-        return GEN_ERROR_UNKNOWN;
+        return err;
     }
 
     ledc_channel_config_t channel_conf = {
@@ -59,16 +31,16 @@ rect_gen_start(gen_t *base_gen, gen_params_t *params) {
             .channel = LEDC_CHANNEL_0,
             .timer_sel = LEDC_TIMER_0,
             .gpio_num = O_SIGNAL,
-            .duty = params->symmetry * 255,
+            .duty = symmetry * 255,
             .hpoint = 0,
     };
 
     err = ledc_channel_config(&channel_conf);
     if(err) {
-        return GEN_ERROR_UNKNOWN;
+        return err;
     }
 
-    return GEN_ERROR_NONE;
+    return ESP_OK;
 }
 
 static esp_err_t
@@ -77,7 +49,6 @@ rect_gen_stop(gen_t *base_gen) {
 }
 
 static const gen_interface_t rect_gen_impl = {
-        .probe = rect_gen_probe,
         .start = rect_gen_start,
         .stop = rect_gen_stop,
 };

@@ -15,8 +15,6 @@ const char *ctl_signal_type_to_string[] = {
 };
 
 static struct g {
-    bool enabled;
-
     ctl_signal_type_t type;
 
     // map of signal types to appropriate generators bases, see `ctl_init()`
@@ -38,57 +36,44 @@ ctl_init(void) {
     g.signal_type_to_gen[CTL_SIGNAL_TYPE_TRIANGLE] = &g.triangle_gen.base_gen;
 }
 
-u32
-ctl_enable(ctl_signal_type_t type, gen_params_t *params) {
-    ASSERT(!g.enabled);
+esp_err_t
+ctl_enable(ctl_signal_type_t type, ctl_params_t *params) {
+    ASSERT(g.type != CTL_SIGNAL_TYPE_NONE);
 
     gen_t *gen = g.signal_type_to_gen[type];
 
-    ESP_LOGI(TAG, "starting %s generator with parametars - freq: %" PRIi32 ", symmetry: %.2f, offset: %0.2f",
+    ESP_LOGI(TAG, "starting %s generator with parametars - freq: %d, symmetry: %.2f, offset: %.2f",
             ctl_signal_type_to_string[type], params->freq, params->symmetry, params->offset);
 
-    if(type == CTL_SIGNAL_TYPE_SINE) {
-        // NOTE: why would we even care here?
-        params->symmetry = 0.5;
-    }
-
-    u32 err = gen_start(gen, params);
+    esp_err_t err = gen_start(gen, params->freq, params->symmetry);
     if(err) {
-        ESP_LOGE(TAG, "generator error: %" PRIu32, err);
+        ESP_LOGE(TAG, "generator error: %d", err);
         return err;
     }
 
+    g.type = type;
     ESP_LOGI(TAG, "started generator successfully");
 
-    g.enabled = true;
-    g.type = type;
-
-    return GEN_ERROR_NONE;
+    return ESP_OK;
 }
 
-u32
-ctl_probe(ctl_signal_type_t type, gen_params_t *params) {
-    gen_t *gen = g.signal_type_to_gen[type];
-
-    return gen_probe(gen, params);
-}
-
-void
+esp_err_t
 ctl_disable(void) {
     gen_t *current = g.signal_type_to_gen[g.type];
 
     esp_err_t err = gen_stop(current);
     if(err) {
-        // TODO: better error handling here
-        return;
+        return err;
     }
 
     ESP_LOGI(TAG, "generator stopped");
 
-    g.enabled = false;
+    g.type = CTL_SIGNAL_TYPE_NONE;
+
+    return ESP_OK;
 }
 
 bool
 ctl_is_enabled(void) {
-    return g.enabled;
+    return g.type != CTL_SIGNAL_TYPE_NONE;
 }
