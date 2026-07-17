@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "lcd.h"
 #include "util/constants.h"
+#include "util/macros.h"
 
 static const char *TAG = "UI";
 
@@ -36,9 +37,9 @@ static struct g {
         bool is_zero;
     } input;
 
+    // generator params
     ctl_signal_type_t type;
-    gen_params_t params;
-    gen_params_error_t err;
+    ctl_params_t params;
 } g;
 
 static void
@@ -55,6 +56,8 @@ go_home(void) {
 
 void
 ui_init(void) {
+    // make sure we never have `CTL_SIGNAL_TYPE_NONE` as the type
+    g.type = CTL_SIGNAL_TYPE_SINE;
     go_home();
 }
 
@@ -99,13 +102,18 @@ handle_digit(int d) {
 }
 
 static inline float
-floating_input(void) {
+float_input(void) {
     return g.input.sign * (g.input.whole + g.input.frac / pow(10, g.input.frac_count));
+}
+
+static inline float
+int_input(void) {
+    return g.input.sign * g.input.whole;
 }
 
 static void
 print_decimal(void) {
-    float value = floating_input();
+    float value = float_input();
     lcd_tprintf(1, 0, ">%c", (g.input.sign < 0) ? '-' : ' ');
 
     if(value || g.input.is_zero) {
@@ -145,9 +153,11 @@ ui_render(void) {
         }
         case UI_MENU_FREQ: {
             lcd_tprintf(0, 0, "type frequency");
-            lcd_tprintf(1, 0, "> ", g.input.whole);
-            if(g.input.whole) {
-                lcd_tprintf(1, 2, "%d", g.input.whole);
+            lcd_tprintf(1, 0, "> ");
+
+            int value = int_input();
+            if(value) {
+                lcd_tprintf(1, 2, "%d", value);
             }
 
             lcd_tprintf(3, 0, "%d-%d", signal_type_to_freq_range[g.type][0], signal_type_to_freq_range[g.type][1]);
@@ -179,12 +189,9 @@ ui_handle_key(key_t key) {
     switch(key) {
         case KEY_ENABLE: {
             if(ctl_is_enabled()) {
-                ctl_disable();
+                ESP_ERROR_CHECK(ctl_disable());
             } else {
-                g.err = ctl_enable(g.type, &g.params);
-                if(g.err) {
-                    // set the asterixes here
-                }
+                ESP_ERROR_CHECK(ctl_enable(g.type, &g.params));
 
                 go_home();
             }
@@ -193,30 +200,21 @@ ui_handle_key(key_t key) {
         }
         case KEY_OK: {
             if(g.menu == UI_MENU_FREQ) {
-                // TODO: BUG: this currently does not work as we did not update the `g.params`. after the refactor it is
-                // not going to be implemented this way so i am just not going to bother now
-                if(ctl_probe(g.type, &g.params) & GEN_ERROR_FREQ) {
-                    // do not accept this input
-                    // TODO: handle the error somehow here, maybe add ! next to the range or something
-                } else {
-                    g.params.freq = g.input.whole;
-                    go_home();
-                }
-            } else if(g.menu == UI_MENU_OFFSET) {
-                // double check this
-                if(ctl_probe(g.type, &g.params) & GEN_ERROR_OFFSET) {
-                    // do not accept this input
-                    // TODO: handle the error somehow here, maybe add ! next to the range or something
-                } else {
-                    g.params.offset = floating_input();
+                int value = int_input();
+                if(IN_RANGE(value, signal_type_to_freq_range[g.type][0], signal_type_to_freq_range[g.type][1])) {
+                    g.params.freq = value;
                     go_home();
                 }
             } else if(g.menu == UI_MENU_SYMMETRY) {
-                if(ctl_probe(g.type, &g.params) & GEN_ERROR_SYMMETRY) {
-                    // do not accept this input
-                    // TODO: handle the error somehow here, maybe add ! next to the range or something
-                } else {
-                    g.params.symmetry = floating_input();
+                float value = float_input();
+                if(IN_RANGE(value, 0, 1)) {
+                    g.params.symmetry = value;
+                    go_home();
+                }
+            } else if(g.menu == UI_MENU_OFFSET) {
+                float value = float_input();
+                if(IN_RANGE(value, MIN_OFFSET, MAX_OFFSET)) {
+                    g.params.offset = value;
                     go_home();
                 }
             }

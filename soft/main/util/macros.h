@@ -9,6 +9,8 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define CLAMP(v, a, b) (MAX(MIN((v), (b)), (a)))
 
+#define IN_RANGE(value, min, max) ((value) >= (min) && (value) <= (max))
+
 #define FEQUAL(f, v) (fabsf((f) - (v)) < 1e-6)
 
 #ifdef DEBUG

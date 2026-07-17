@@ -1,34 +1,14 @@
 #include "triangle_gen.h"
 
 #include "util/constants.h"
+#include "util/macros.h"
 
-static u32
-verify_params(gen_params_t *params) {
-    u32 ret = GEN_ERROR_NONE;
+static esp_err_t
+generate_points(u8 *buffer, u32 count, int freq, float symmetry) {
+    ASSERT(freq >= MIN_TRI_FREQ && freq <= MAX_TRI_FREQ);
+    ASSERT(symmetry >= 0 && symmetry <= 1);
 
-    if(params->freq < MIN_TRI_FREQ || params->freq > MAX_TRI_FREQ) {
-        ret |= GEN_ERROR_FREQ;
-    }
-
-    if(params->symmetry < 0 || params->symmetry > 1) {
-        ret |= GEN_ERROR_SYMMETRY;
-    }
-
-    if(params->offset < MIN_OFFSET || params->offset > MAX_OFFSET) {
-        ret |= GEN_ERROR_OFFSET;
-    }
-
-    return ret;
-}
-
-static u32
-generate_points(u8 *buffer, u32 count, gen_params_t *params) {
-    u32 err = verify_params(params);
-    if(err) {
-        return err;
-    }
-
-    int peak_index = count * params->symmetry;
+    int peak_index = count * symmetry;
 
     for(int i = 0; i < peak_index; i++) {
         buffer[i] = (255 * i) / peak_index;
@@ -40,15 +20,10 @@ generate_points(u8 *buffer, u32 count, gen_params_t *params) {
         buffer[i] = (255 * steps_from_end) / falling_steps;
     }
 
-    return GEN_ERROR_NONE;
+    return ESP_OK;
 }
-
-static const dac_dma_gen_interface_t triangle_gen_impl = {
-        .verify_params = verify_params,
-        .generate_points = generate_points,
-};
 
 void
 triangle_gen_init(dac_dma_gen_t *gen) {
-    dac_dma_gen_init(gen, &triangle_gen_impl);
+    dac_dma_gen_init(gen, generate_points);
 }
