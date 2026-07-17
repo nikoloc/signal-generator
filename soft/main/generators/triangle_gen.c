@@ -1,32 +1,32 @@
 #include "triangle_gen.h"
 
-// static u32
-// verify_params(gen_params_t *params) {
-//     u32 ret = GEN_ERROR_NONE;
-//     if(params->freq < 10) {
-//         ret |= GEN_ERROR_FREQ;
-//     }
+#include "util/constants.h"
 
-//     if(params->symmetry < 0 || params->symmetry > 1) {
-//         ret |= GEN_ERROR_SYMMETRY;
-//     }
+static u32
+verify_params(gen_params_t *params) {
+    u32 ret = GEN_ERROR_NONE;
 
-//     if(params->offset > 12 || params->offset < -12) {
-//         ret |= GEN_ERROR_OFFSET;
-//     }
+    if(params->freq < MIN_TRI_FREQ || params->freq > MAX_TRI_FREQ) {
+        ret |= GEN_ERROR_FREQ;
+    }
 
-//     return ret;
-// }
+    if(params->symmetry < 0 || params->symmetry > 1) {
+        ret |= GEN_ERROR_SYMMETRY;
+    }
+
+    if(params->offset < MIN_OFFSET || params->offset > MAX_OFFSET) {
+        ret |= GEN_ERROR_OFFSET;
+    }
+
+    return ret;
+}
 
 static u32
 generate_points(u8 *buffer, u32 count, gen_params_t *params) {
-    // u32 err = GEN_ERROR_NONE;
-
-    // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-    // u32 err = verify_params(params);
-    //     if(err) {
-    //         return err;
-    //     }
+    u32 err = verify_params(params);
+    if(err) {
+        return err;
+    }
 
     int peak_index = count * params->symmetry;
 
@@ -43,7 +43,12 @@ generate_points(u8 *buffer, u32 count, gen_params_t *params) {
     return GEN_ERROR_NONE;
 }
 
+static const dac_dma_gen_interface_t triangle_gen_impl = {
+        .verify_params = verify_params,
+        .generate_points = generate_points,
+};
+
 void
 triangle_gen_init(dac_dma_gen_t *gen) {
-    dac_dma_gen_init(gen, generate_points);
+    dac_dma_gen_init(gen, &triangle_gen_impl);
 }

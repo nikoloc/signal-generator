@@ -14,3 +14,7 @@ set(SRCS
 
 idf_component_register(SRCS ${SRCS}
                        INCLUDE_DIRS ".")
+
+if(DEBUG)
+    add_compile_definitions(DEBUG=1)
+endif()

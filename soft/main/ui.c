@@ -4,15 +4,16 @@
 #include <math.h>
 
 #include "ctl.h"
+#include "esp_log.h"
 #include "lcd.h"
 #include "util/constants.h"
-#include "util/macros.h"
 
-const u32 adjustement_vals[4][2] = {
-    {}, // Because we index this with CLT_SIGNAL_... and CTL_SIGNAL_NONE = 0
-    {MIN_SIN_FREQ, MAX_SINE_FREQ},
-    {MIN_RECT_FREQ, MAX_RECT_FREQ},
-    {MIN_TRI_FREQ, MAX_TRI_FREQ},
+static const char *TAG = "UI";
+
+const int signal_type_to_freq_range[][2] = {
+        [CTL_SIGNAL_TYPE_SINE] = {MIN_SINE_FREQ, MAX_SINE_FREQ},
+        [CTL_SIGNAL_TYPE_RECT] = {MIN_RECT_FREQ, MAX_RECT_FREQ},
+        [CTL_SIGNAL_TYPE_TRIANGLE] = {MIN_TRI_FREQ, MAX_TRI_FREQ},
 };
 
 typedef enum ui_menu {
@@ -20,69 +21,45 @@ typedef enum ui_menu {
     UI_MENU_TYPE,
     UI_MENU_FREQ,
     UI_MENU_OFFSET,
-    UI_MENU_SIMMETRY,
-    UI_MENU_CHANGED_PARAM,
+    UI_MENU_SYMMETRY,
 } ui_menu_t;
-
-typedef enum adjusted_param {
-    ADJ_MIN = 0,
-    ADJ_MAX,
-    ADJ_FREQ,
-    ADJ_SYMM,
-    ADJ_OFF,
-    ADJ_NONE,
-} adjusted_param_t;
-
-const char* adj_param_to_string[] = {
-    [ADJ_MIN] = "min",
-    [ADJ_MAX] = "max",
-    [ADJ_FREQ] = "frequency",
-    [ADJ_SYMM] = "symmetry",
-    [ADJ_OFF] = "offset",
-};
 
 static struct g {
     ui_menu_t menu;
-    bool enabled;
-    adjusted_param_t adj_m;
-    adjusted_param_t adj_fso;
 
     struct {
-        i32 sign;
-        i32 whole, frac;
-        i32 frac_count;
+        int sign;
+        int whole, frac;
+        int frac_count;
         bool dot;
-        // do sada cim bi kucao broj je ostala nula, sada moras da ukucas nulu, izgleda lepse...
-        bool zero;
-    } pending;
+        // in order to display a zero properly
+        bool is_zero;
+    } input;
 
     ctl_signal_type_t type;
     gen_params_t params;
-    gen_error_t err;
+    gen_params_error_t err;
 } g;
 
 static void
 go_home(void) {
+    // set everything to default
     g.menu = UI_MENU_HOME;
-    g.adj_m = ADJ_NONE;
-    g.adj_fso = ADJ_NONE;
-    g.pending.whole = 0;
-    g.pending.frac = 0;
-    g.pending.frac_count = 0;
-    g.pending.dot = false;
-    g.pending.zero = false;
-    g.pending.sign = 1;
+    g.input.whole = 0;
+    g.input.frac = 0;
+    g.input.frac_count = 0;
+    g.input.dot = false;
+    g.input.is_zero = false;
+    g.input.sign = 1;
 }
 
 void
 ui_init(void) {
-    g.type = CTL_SIGNAL_TYPE_SINE;
     go_home();
 }
 
-
 static void
-handle_digit(i32 d) {
+handle_digit(int d) {
     if(g.menu == UI_MENU_HOME) {
         if(d == 1) {
             g.menu = UI_MENU_TYPE;
@@ -90,116 +67,57 @@ handle_digit(i32 d) {
             g.menu = UI_MENU_FREQ;
         } else if(d == 3) {
             g.menu = UI_MENU_OFFSET;
-        } else if(d == 4) {
-            g.menu = UI_MENU_SIMMETRY;
+        } else if(d == 4 && g.type != CTL_SIGNAL_TYPE_SINE) {
+            // sine does not have symmetry, so pass in that case
+            g.menu = UI_MENU_SYMMETRY;
         }
-    } else if(g.menu == UI_MENU_TYPE && d > CTL_SIGNAL_TYPE_NONE && d < _CTL_SIGNAL_TYPE_COUNT) {
+    } else if(g.menu == UI_MENU_TYPE && d < _CTL_SIGNAL_TYPE_COUNT) {
         g.type = d;
-        // We can decide if we want all settings to reset uppon signal type change
+
+        // we can decide if we want all settings to reset upon signal type change
         g.params.freq = 0;
         g.params.offset = 0;
         g.params.symmetry = 0;
+
         go_home();
-    } else if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SIMMETRY) {
-        if(g.pending.dot) {
-            g.pending.frac_count++;
-            g.pending.frac = g.pending.frac * 10 + d;
+    } else if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+        // handle input for this type
+        if(g.input.dot) {
+            g.input.frac_count++;
+            g.input.frac = g.input.frac * 10 + d;
         } else {
-            g.pending.whole = g.pending.whole * 10 + d;
+            g.input.whole = g.input.whole * 10 + d;
         }
-        if (!d) {
-            g.pending.zero = true;
+
+        // TODO: this may work, but for the wrong reason, currently it is going to set it to true, for any zero
+        // anywhere. so it works for the cause we need but it does not actually keep the info if the number is zero, as
+        // the name would suggest. investigate.
+        if(d == 0) {
+            g.input.is_zero = true;
         }
     }
 }
 
-static void
-print_decimal() {
-    float value = g.pending.sign * (g.pending.whole + g.pending.frac / pow(10, g.pending.frac_count));
-    lcd_tprintf(1, 0, ">%c", (g.pending.sign < 0) ? '-':' ');
+static inline float
+floating_input(void) {
+    return g.input.sign * (g.input.whole + g.input.frac / pow(10, g.input.frac_count));
+}
 
-    if (value || g.pending.zero) {
-        if (g.pending.frac_count == 0) {
-            lcd_tprintf(1, 2, "%d%s", (value < 0) ? ((i32)-value) : ((i32)value), (g.pending.dot) ? "." : "");
-        } else if (g.pending.frac_count == 1) {
-            lcd_tprintf(1, 2, "%.1f", (value < 0) ? (-value) : (value));
+static void
+print_decimal(void) {
+    float value = floating_input();
+    lcd_tprintf(1, 0, ">%c", (g.input.sign < 0) ? '-' : ' ');
+
+    if(value || g.input.is_zero) {
+        if(g.input.frac_count == 0) {
+            lcd_tprintf(1, 2, "%d%s", (value < 0) ? -value : value, (g.input.dot) ? "." : "");
+        } else if(g.input.frac_count == 1) {
+            lcd_tprintf(1, 2, "%.1f", (value < 0) ? -value : value);
         } else {
-            lcd_tprintf(1, 2, "%.2f", (value < 0) ? (-value) : (value));
+            lcd_tprintf(1, 2, "%.2f", (value < 0) ? -value : value);
         }
     }
 }
-
-// Ove tri funkcije su skoro identicne, mrzelo me je da smislim nesto pametnije
-
-static void
-verify_freq() {
-    if (g.params.freq < adjustement_vals[g.type][0]) {
-        g.params.freq = adjustement_vals[g.type][0];
-        g.adj_m = ADJ_MIN;
-        g.adj_fso = ADJ_FREQ;
-        g.menu = UI_MENU_CHANGED_PARAM;
-    } else if (g.params.freq > adjustement_vals[g.type][1]) {
-        g.params.freq = adjustement_vals[g.type][1];
-        g.adj_m = ADJ_MAX;
-        g.adj_fso = ADJ_FREQ;
-        g.menu = UI_MENU_CHANGED_PARAM;
-    } else {
-        g.menu = UI_MENU_HOME;
-        go_home();
-    }
-}
-
-static void
-verify_offset() {
-    if (g.params.offset < -MAX_OFFSET) {
-        g.params.offset = -MAX_OFFSET;
-        g.adj_m = ADJ_MIN;
-        g.adj_fso = ADJ_OFF;
-        g.menu = UI_MENU_CHANGED_PARAM;
-    } else if (g.params.offset > MAX_OFFSET) {
-        g.params.offset = MAX_OFFSET;
-        g.adj_m = ADJ_MAX;
-        g.adj_fso = ADJ_OFF;
-        g.menu = UI_MENU_CHANGED_PARAM;
-    } else {
-        g.menu = UI_MENU_HOME;
-        go_home();
-    }
-}
-
-static void
-verify_symmetry() {
-    if (g.params.symmetry < 0) {
-        g.params.symmetry = 0;
-        g.adj_m = ADJ_MIN;
-        g.adj_fso = ADJ_SYMM;
-        g.menu = UI_MENU_CHANGED_PARAM;
-    } else if (g.params.symmetry > 1) {
-        g.params.symmetry = 1;
-        g.adj_m = ADJ_MAX;
-        g.adj_fso = ADJ_SYMM;
-        g.menu = UI_MENU_CHANGED_PARAM;
-    } else {
-        g.menu = UI_MENU_HOME;
-        go_home();
-    }
-}
-
-
-static void // Sorry ako je nepregledno, al poenta je da samo jedna funkcija moze svaki "error" da ispise
-ui_adjusted_param_screen() {
-    lcd_tprintf(0, 0, "%s %s", adj_param_to_string[g.adj_m], adj_param_to_string[g.adj_fso]);
-    lcd_tprintf(1, 0, "for %s is", ctl_signal_type_to_string[g.type]);
-    if (g.adj_fso == ADJ_FREQ) {
-        lcd_tprintf(2, 0, "%d", adjustement_vals[g.type][g.adj_m]);
-    } else if (g.adj_fso == ADJ_OFF) {
-        lcd_tprintf(2, 0, "%d", (g.adj_m == ADJ_MIN) ? -12 : 12);
-    } else if (g.adj_fso == ADJ_SYMM) {
-        lcd_tprintf(2, 0, "%d", (g.adj_m == ADJ_MIN) ? 0 : 1);
-    }
-    lcd_tprintf(3, 0, "Click OK to adj");
-}
-
 
 void
 ui_render(void) {
@@ -208,11 +126,12 @@ ui_render(void) {
     switch(g.menu) {
         case UI_MENU_HOME: {
             lcd_tprintf(0, 0, "1.type:%s", ctl_signal_type_to_string[g.type]);
-            lcd_tprintf(1, 0, "2.freq:%" PRIi32, g.params.freq);
+            lcd_tprintf(1, 0, "2.freq:%d", g.params.freq);
             lcd_tprintf(2, 0, "3.offs:%.2f", g.params.offset);
-            if (g.type != CTL_SIGNAL_TYPE_SINE) {
+            if(g.type != CTL_SIGNAL_TYPE_SINE) {
                 lcd_tprintf(3, 0, "4.sim:%.2f", g.params.symmetry);
             }
+
             break;
         }
         case UI_MENU_TYPE: {
@@ -226,31 +145,28 @@ ui_render(void) {
         }
         case UI_MENU_FREQ: {
             lcd_tprintf(0, 0, "type frequency");
-            lcd_tprintf(1, 0, "> ", g.pending.whole);
-            if (g.pending.whole) {
-                lcd_tprintf(1, 2, "%d", g.pending.whole);
+            lcd_tprintf(1, 0, "> ", g.input.whole);
+            if(g.input.whole) {
+                lcd_tprintf(1, 2, "%d", g.input.whole);
             }
+
+            lcd_tprintf(3, 0, "%d-%d", signal_type_to_freq_range[g.type][0], signal_type_to_freq_range[g.type][1]);
 
             break;
         }
 
         case UI_MENU_OFFSET: {
             lcd_tprintf(0, 0, "type offset");
-
             print_decimal();
+            lcd_tprintf(3, 0, "%d-%d", MIN_OFFSET, MAX_OFFSET);
 
             break;
         }
-        case UI_MENU_SIMMETRY: {
+        case UI_MENU_SYMMETRY: {
             lcd_tprintf(0, 0, "type symmetry");
-
             print_decimal();
+            lcd_tprintf(3, 0, "%d-%d", 0, 1);
 
-            break;
-
-        }
-        case UI_MENU_CHANGED_PARAM: {
-            ui_adjusted_param_screen();
             break;
         }
     }
@@ -258,15 +174,11 @@ ui_render(void) {
 
 void
 ui_handle_key(key_t key) {
-    printf("key: %d\n", key);
+    ESP_LOGI(TAG, "key pressed: %d\n", key);
 
     switch(key) {
-        case KEY_NONE: {
-            break;
-        }
         case KEY_ENABLE: {
-            if(g.enabled) {
-                g.enabled = false;
+            if(ctl_is_enabled()) {
                 ctl_disable();
             } else {
                 g.err = ctl_enable(g.type, &g.params);
@@ -274,7 +186,6 @@ ui_handle_key(key_t key) {
                     // set the asterixes here
                 }
 
-                g.enabled = true;
                 go_home();
             }
 
@@ -282,17 +193,32 @@ ui_handle_key(key_t key) {
         }
         case KEY_OK: {
             if(g.menu == UI_MENU_FREQ) {
-                g.params.freq = g.pending.whole;
-                verify_freq(); // Prvo ovde verifikujemo vrednosti i clampujemo ih ako treba
+                // TODO: BUG: this currently does not work as we did not update the `g.params`. after the refactor it is
+                // not going to be implemented this way so i am just not going to bother now
+                if(ctl_probe(g.type, &g.params) & GEN_ERROR_FREQ) {
+                    // do not accept this input
+                    // TODO: handle the error somehow here, maybe add ! next to the range or something
+                } else {
+                    g.params.freq = g.input.whole;
+                    go_home();
+                }
             } else if(g.menu == UI_MENU_OFFSET) {
                 // double check this
-                g.params.offset = g.pending.sign * (g.pending.whole + g.pending.frac / pow(10, g.pending.frac_count));
-                verify_offset();
-            } else if(g.menu == UI_MENU_SIMMETRY) {
-                g.params.symmetry = g.pending.sign * (g.pending.whole + g.pending.frac / pow(10, g.pending.frac_count));
-                verify_symmetry();
-            } else if(g.menu == UI_MENU_CHANGED_PARAM) {
-                go_home();
+                if(ctl_probe(g.type, &g.params) & GEN_ERROR_OFFSET) {
+                    // do not accept this input
+                    // TODO: handle the error somehow here, maybe add ! next to the range or something
+                } else {
+                    g.params.offset = floating_input();
+                    go_home();
+                }
+            } else if(g.menu == UI_MENU_SYMMETRY) {
+                if(ctl_probe(g.type, &g.params) & GEN_ERROR_SYMMETRY) {
+                    // do not accept this input
+                    // TODO: handle the error somehow here, maybe add ! next to the range or something
+                } else {
+                    g.params.symmetry = floating_input();
+                    go_home();
+                }
             }
 
             break;
@@ -303,31 +229,31 @@ ui_handle_key(key_t key) {
             break;
         }
         case KEY_BACKSLASH: {
-            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SIMMETRY) {
-                if(g.pending.dot) {
-                    if(g.pending.frac_count > 0) {
-                        g.pending.frac /= 10;
-                        g.pending.frac_count--;
+            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+                if(g.input.dot) {
+                    if(g.input.frac_count > 0) {
+                        g.input.frac /= 10;
+                        g.input.frac_count--;
                     } else {
-                        g.pending.dot = false;
+                        g.input.dot = false;
                     }
                 } else {
-                    g.pending.whole /= 10;
+                    g.input.whole /= 10;
                 }
             }
 
             break;
         }
         case KEY_SIGN: {
-            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SIMMETRY) {
-                g.pending.sign *= -1;
+            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+                g.input.sign *= -1;
             }
 
             break;
         }
         case KEY_DOT: {
-            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SIMMETRY) {
-                g.pending.dot = true;
+            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+                g.input.dot = true;
             }
 
             break;
@@ -340,5 +266,6 @@ ui_handle_key(key_t key) {
         }
     }
 
+    // rerender the scene
     ui_render();
 }
