@@ -22,6 +22,8 @@
 #define I_KEYPAD_COL_3 (15)
 
 #define O_SIGNAL (25)
+#define O_OFFSET_NEGATIVE (10)
+#define O_OFFSET_POSITIVE (9)
 
 #define O_STATUS_LED (11)
 
