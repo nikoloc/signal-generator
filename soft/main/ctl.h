@@ -1,7 +1,7 @@
 #ifndef CTL_H
 #define CTL_H
 
-#include "generators/gen.h"
+#include "esp_err.h"
 
 typedef enum ctl_signal_type {
     CTL_SIGNAL_TYPE_NONE = 0,
@@ -11,16 +11,24 @@ typedef enum ctl_signal_type {
     _CTL_SIGNAL_TYPE_COUNT,
 } ctl_signal_type_t;
 
+typedef struct ctl_params {
+    int freq;
+    float symmetry;
+    float offset;
+} ctl_params_t;
+
 extern const char *ctl_signal_type_to_string[_CTL_SIGNAL_TYPE_COUNT];
 
 void
 ctl_init(void);
 
-// returns errors if any
-u32
-ctl_enable(ctl_signal_type_t type, gen_params_t *params);
+esp_err_t
+ctl_enable(ctl_signal_type_t type, ctl_params_t *params);
 
-void
+esp_err_t
 ctl_disable(void);
+
+bool
+ctl_is_enabled(void);
 
 #endif

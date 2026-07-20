@@ -1,34 +1,14 @@
 #include "triangle_gen.h"
 
-// static u32
-// verify_params(gen_params_t *params) {
-//     u32 ret = GEN_ERROR_NONE;
-//     if(params->freq < 10) {
-//         ret |= GEN_ERROR_FREQ;
-//     }
+#include "util/constants.h"
+#include "util/macros.h"
 
-//     if(params->symmetry < 0 || params->symmetry > 1) {
-//         ret |= GEN_ERROR_SYMMETRY;
-//     }
+static esp_err_t
+generate_points(u8 *buffer, u32 count, int freq, float symmetry) {
+    ASSERT(freq >= MIN_TRI_FREQ && freq <= MAX_TRI_FREQ);
+    ASSERT(symmetry >= 0 && symmetry <= 1);
 
-//     if(params->offset > 12 || params->offset < -12) {
-//         ret |= GEN_ERROR_OFFSET;
-//     }
-
-//     return ret;
-// }
-
-static u32
-generate_points(u8 *buffer, u32 count, gen_params_t *params) {
-    // u32 err = GEN_ERROR_NONE;
-
-    // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-    // u32 err = verify_params(params);
-    //     if(err) {
-    //         return err;
-    //     }
-
-    int peak_index = count * params->symmetry;
+    int peak_index = count * symmetry;
 
     for(int i = 0; i < peak_index; i++) {
         buffer[i] = (255 * i) / peak_index;
@@ -40,7 +20,7 @@ generate_points(u8 *buffer, u32 count, gen_params_t *params) {
         buffer[i] = (255 * steps_from_end) / falling_steps;
     }
 
-    return GEN_ERROR_NONE;
+    return ESP_OK;
 }
 
 void

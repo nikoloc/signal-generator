@@ -5,46 +5,25 @@
 #include "driver/ledc.h"
 #include "gen.h"
 #include "main.h"
+#include "util/constants.h"
+#include "util/macros.h"
 
-// static u32
-// verify_params(gen_params_t *params) {
-//     u32 ret = GEN_ERROR_NONE;
-//     if(params->freq < 10) {
-//         ret |= GEN_ERROR_FREQ;
-//     }
+static esp_err_t
+rect_gen_start(gen_t *base_gen, int freq, float symmetry) {
+    ASSERT(freq >= MIN_RECT_FREQ && freq <= MAX_RECT_FREQ);
+    ASSERT(symmetry >= 0 && symmetry <= 1);
 
-//     if(params->symmetry < 0 || params->symmetry > 1) {
-//         ret |= GEN_ERROR_SYMMETRY;
-//     }
-
-//     if(params->offset > 12 || params->offset < -12) {
-//         ret |= GEN_ERROR_OFFSET;
-//     }
-
-//     return ret;
-// }
-
-static u32
-rect_gen_start(gen_t *base_gen, gen_params_t *params) {
-    u32 err = GEN_ERROR_NONE;
-
-    // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-    // u32 err = verify_params(params);
-    //     if(err) {
-    //         return err;
-    //     }
-    //
     ledc_timer_config_t timer_conf = {
-                .speed_mode = LEDC_HIGH_SPEED_MODE,
-                .timer_num = LEDC_TIMER_0,
-                .duty_resolution = LEDC_TIMER_8_BIT,
-                .freq_hz = params->freq,
-                .clk_cfg = LEDC_AUTO_CLK,
+            .speed_mode = LEDC_HIGH_SPEED_MODE,
+            .timer_num = LEDC_TIMER_0,
+            .duty_resolution = LEDC_TIMER_8_BIT,
+            .freq_hz = freq,
+            .clk_cfg = LEDC_AUTO_CLK,
     };
 
-    err = ledc_timer_config(&timer_conf);
+    esp_err_t err = ledc_timer_config(&timer_conf);
     if(err) {
-        return GEN_ERROR_UNKNOWN;
+        return err;
     }
 
     ledc_channel_config_t channel_conf = {
@@ -52,16 +31,16 @@ rect_gen_start(gen_t *base_gen, gen_params_t *params) {
             .channel = LEDC_CHANNEL_0,
             .timer_sel = LEDC_TIMER_0,
             .gpio_num = O_SIGNAL,
-            .duty = params->symmetry * 255,
+            .duty = symmetry * 255,
             .hpoint = 0,
     };
 
     err = ledc_channel_config(&channel_conf);
     if(err) {
-        return GEN_ERROR_UNKNOWN;
+        return err;
     }
 
-    return GEN_ERROR_NONE;
+    return ESP_OK;
 }
 
 static esp_err_t

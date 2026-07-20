@@ -2,48 +2,33 @@
 
 #include <inttypes.h>
 
+#include "util/constants.h"
 #include "util/macros.h"
 
-// static u32
-// verify_params(gen_params_t *params) {
-//     u32 ret = GEN_ERROR_NONE;
+static esp_err_t
+sine_gen_start(gen_t *base_gen, int freq, float symmetry) {
+    UNUSED(symmetry);
+    ASSERT(freq >= MIN_SINE_FREQ && freq <= MAX_SINE_FREQ);
 
-//     printf("frekvencija %" PRIi32 "\n", params->freq);
-//     if(params->freq < 10) {
-//         printf("kako bre ovo\n");
-//         ret |= GEN_ERROR_FREQ;
-//     }
-
-//     if(params->offset > 12 || params->offset < -12) {
-//         ret |= GEN_ERROR_OFFSET;
-//     }
-
-//     return ret;
-// }
-
-static u32
-sine_gen_start(gen_t *base_gen, gen_params_t *params) {
-    u32 err = GEN_ERROR_NONE;
     sine_gen_t *gen = CONTAINER_OF(base_gen, sine_gen_t, base_gen);
-
-    // Sklonio sam verifikaciju parametara jer se sada uvek clampuju na granicne vrednosti
-    // u32 err = verify_params(params);
-    //     if(err) {
-    //         return err;
-    //     }
 
     dac_cosine_config_t conf = {
             .chan_id = DAC_CHAN_0,
-            .freq_hz = params->freq,
+            .freq_hz = freq,
             .phase = DAC_COSINE_PHASE_0,
     };
 
-    err = dac_cosine_new_channel(&conf, &gen->dac_handle);
+    esp_err_t err = dac_cosine_new_channel(&conf, &gen->dac_handle);
     if(err) {
         return err;
     }
 
-    return dac_cosine_start(gen->dac_handle);
+    err = dac_cosine_start(gen->dac_handle);
+    if(err) {
+        return err;
+    }
+
+    return ESP_OK;
 }
 
 static esp_err_t
