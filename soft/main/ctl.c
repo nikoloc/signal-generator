@@ -7,6 +7,7 @@
 #include "generators/sine_gen.h"
 #include "generators/triangle_gen.h"
 #include "main.h"
+#include "offset.h"
 #include "util/macros.h"
 
 static const char *TAG = "CTL";
@@ -33,6 +34,8 @@ static struct g {
 
 void
 ctl_init(void) {
+    offset_init();
+
     none_gen_init(&g.none_gen);
     sine_gen_init(&g.sine_gen);
     rect_gen_init(&g.rect_gen);
@@ -70,6 +73,12 @@ ctl_enable(ctl_signal_type_t type, ctl_params_t *params) {
         return err;
     }
 
+    err = offset_enable(params->offset);
+    if(err) {
+        gen_stop(gen);
+        return err;
+    }
+
     g.is_enabled = true;
     g.type = type;
 
@@ -91,15 +100,17 @@ ctl_disable(void) {
     esp_err_t err = gen_stop(current);
     if(err) {
         ESP_LOGE(TAG, "generator error: %d", err);
-        return err;
+        // continue anyway, we want to disable the offset
     }
+
+    offset_disable();
 
     g.is_enabled = false;
 
     gpio_set_level(O_SIGNAL, 0);
 
-    ESP_LOGI(TAG, "generator stopped successfully");
-    return ESP_OK;
+    ESP_LOGI(TAG, "generator stopped");
+    return err;
 }
 
 bool
