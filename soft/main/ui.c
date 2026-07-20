@@ -56,8 +56,7 @@ go_home(void) {
 
 void
 ui_init(void) {
-    // make sure we never have `CTL_SIGNAL_TYPE_NONE` as the type
-    g.type = CTL_SIGNAL_TYPE_SINE;
+    g.type = CTL_SIGNAL_TYPE_NONE;
     go_home();
 }
 
@@ -145,7 +144,7 @@ ui_render(void) {
         case UI_MENU_TYPE: {
             lcd_tprintf(0, 0, "select type:");
 
-            for(size_t i = 1; i < _CTL_SIGNAL_TYPE_COUNT; i++) {
+            for(size_t i = 0; i < _CTL_SIGNAL_TYPE_COUNT; i++) {
                 lcd_tprintf(i, 0, "%d. %s", i, ctl_signal_type_to_string[i]);
             }
 
@@ -186,9 +185,15 @@ void
 ui_handle_key(key_t key) {
     ESP_LOGI(TAG, "key pressed: %d\n", key);
 
+    // do not let the user do anything if the generator is enabled
+    if(ctl_is_enabled() && key != KEY_ENABLE) {
+        return;
+    }
+
     switch(key) {
         case KEY_ENABLE: {
             if(ctl_is_enabled()) {
+                // TODO: add better error handling
                 ESP_ERROR_CHECK(ctl_disable());
             } else {
                 ESP_ERROR_CHECK(ctl_enable(g.type, &g.params));

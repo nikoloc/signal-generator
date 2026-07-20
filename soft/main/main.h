@@ -23,4 +23,6 @@
 
 #define O_SIGNAL (25)
 
+#define O_STATUS_LED (11)
+
 #endif
