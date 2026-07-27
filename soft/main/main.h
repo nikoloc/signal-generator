@@ -16,7 +16,8 @@
 #define O_KEYPAD_ROW_2 (12)
 #define O_KEYPAD_ROW_3 (13)
 
-#define I_KEYPAD_COL_0 (26)
+// NOTE: changed this from 26 to 16 since 26 is dac2 output
+#define I_KEYPAD_COL_0 (16)
 #define I_KEYPAD_COL_1 (33)
 #define I_KEYPAD_COL_2 (32)
 #define I_KEYPAD_COL_3 (15)
@@ -24,6 +25,9 @@
 #define O_SIGNAL (25)
 #define O_OFFSET_NEGATIVE (10)
 #define O_OFFSET_POSITIVE (9)
+
+// TODO: fix the conflict
+#define O_AMP_REG (26)
 
 #define O_STATUS_LED (11)
 
