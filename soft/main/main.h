@@ -26,8 +26,8 @@
 #define O_OFFSET_NEGATIVE (10)
 #define O_OFFSET_POSITIVE (9)
 
-// TODO: fix the conflict
 #define O_AMP_REG (26)
+#define I_AMP_SENSE (36)
 
 #define O_STATUS_LED (11)
 
