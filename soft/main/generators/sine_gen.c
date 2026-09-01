@@ -8,7 +8,10 @@
 static esp_err_t
 sine_gen_start(gen_t *base_gen, int freq, float symmetry) {
     UNUSED(symmetry);
-    ASSERT(freq >= MIN_SINE_FREQ && freq <= MAX_SINE_FREQ);
+
+    if(freq < MIN_SINE_FREQ && freq < MAX_SINE_FREQ) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     sine_gen_t *gen = CONTAINER_OF(base_gen, sine_gen_t, base_gen);
 
