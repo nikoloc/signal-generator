@@ -103,11 +103,12 @@ ctl_disable(void) {
         // continue anyway, we want to disable the offset
     }
 
+    gpio_set_level(O_SIGNAL, 0);
+
     offset_disable();
+    gpio_set_level(O_SIGNAL, 1);
 
     g.is_enabled = false;
-
-    gpio_set_level(O_SIGNAL, 0);
 
     ESP_LOGI(TAG, "generator stopped");
     return err;

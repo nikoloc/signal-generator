@@ -1,12 +1,12 @@
 #include "triangle_gen.h"
 
 #include "util/constants.h"
-#include "util/macros.h"
 
 static esp_err_t
 generate_points(u8 *buffer, u32 count, int freq, float symmetry) {
-    ASSERT(freq >= MIN_TRI_FREQ && freq <= MAX_TRI_FREQ);
-    ASSERT(symmetry >= 0 && symmetry <= 1);
+    if(freq < MIN_TRI_FREQ || freq > MAX_TRI_FREQ || symmetry < 0 || symmetry > 1) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     int peak_index = count * symmetry;
 

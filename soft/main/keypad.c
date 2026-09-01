@@ -1,11 +1,14 @@
 #include "keypad.h"
 
 #include "driver/gpio.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "main.h"
 #include "ui.h"
 #include "util/macros.h"
+
+static const char *TAG = "KEYPAD";
 
 // TODO: wrap this state into g struct, i am lazy to do it now
 static const gpio_num_t rows[4] = {

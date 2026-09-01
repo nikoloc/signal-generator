@@ -6,12 +6,12 @@
 #include "gen.h"
 #include "main.h"
 #include "util/constants.h"
-#include "util/macros.h"
 
 static esp_err_t
 rect_gen_start(gen_t *base_gen, int freq, float symmetry) {
-    ASSERT(freq >= MIN_RECT_FREQ && freq <= MAX_RECT_FREQ);
-    ASSERT(symmetry >= 0 && symmetry <= 1);
+    if(freq < MIN_RECT_FREQ || freq > MAX_RECT_FREQ || symmetry < 0 || symmetry > 1) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     ledc_timer_config_t timer_conf = {
             .speed_mode = LEDC_HIGH_SPEED_MODE,

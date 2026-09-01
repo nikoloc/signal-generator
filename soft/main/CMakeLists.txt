@@ -5,7 +5,9 @@ set(SRCS
     keypad.c
     ctl.c
     ui.c
+    offset.c
     generators/gen.c
+    generators/none_gen.c
     generators/sine_gen.c
     generators/rect_gen.c
     generators/dac_dma_gen.c
