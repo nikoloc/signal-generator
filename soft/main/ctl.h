@@ -15,6 +15,7 @@ typedef struct ctl_params {
     int freq;
     float symmetry;
     float offset;
+    float ampl;
 } ctl_params_t;
 
 extern const char *ctl_signal_type_to_string[_CTL_SIGNAL_TYPE_COUNT];

@@ -1,6 +1,6 @@
 LTspice 26.0.2 for Windows
-Circuit: C:\users\darko\Desktop\projects\signal-generator\simulation\vca.net
-Start Time: Thu Jul 16 16:12:55 2026
+Circuit: C:\users\darko\Desktop\Projects\Personal\signal-generator\simulation\vca.net
+Start Time: Thu Sep  3 20:06:55 2026
 solver = Normal
 Maximum thread count: 12
 tnom = 27
@@ -8,17 +8,14 @@ temp = 27
 method = trap
 Compress1stOrder = true
 Compress2ndOrder = true
-Early termination of direct N-R iteration.
-Direct Newton iteration failed to find operating point.
-Starting Gmin stepping
-Gmin stepping failed to find operating point. Use".option gminsteps=0" to skip all Gmin stepping.
-Starting source stepping with srcstepmethod=0
-Source stepping succeeded in finding the operating point.
-
-Total elapsed time: 0.483 seconds.
+Direct Newton iteration succeeded in finding operating point.
+Changing Tseed to 1.17188e-09
+Changing Tseed to 1.17188e-11
+Changing Tseed to 1.17188e-08
+Total elapsed time: 0.301 seconds.
 
 Files loaded:
-C:\users\darko\Desktop\projects\signal-generator\simulation\vca.net
+C:\users\darko\Desktop\Projects\Personal\signal-generator\simulation\vca.net
 C:\users\darko\AppData\Local\LTspice\lib\cmp\standard.bjt
-C:\users\darko\Desktop\projects\signal-generator\simulation\TL072.lib
+C:\users\darko\Desktop\Projects\Personal\signal-generator\simulation\TL072.lib
 

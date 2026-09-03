@@ -8,7 +8,7 @@
 #include "generators/triangle_gen.h"
 #include "main.h"
 #include "offset.h"
-#include "util/macros.h"
+#include "regulator.h"
 
 static const char *TAG = "CTL";
 
@@ -79,11 +79,15 @@ ctl_enable(ctl_signal_type_t type, ctl_params_t *params) {
         return err;
     }
 
+    // in milivolts
+    int target = params->ampl * 1000;
+    regulator_enable(target, params->freq);
+
     g.is_enabled = true;
     g.type = type;
 
-    // enabled the status led; dont care if fails
-    gpio_set_level(O_SIGNAL, 1);
+    // enabled the status led
+    gpio_set_level(O_STATUS_LED, 1);
 
     ESP_LOGI(TAG, "generator started successfully");
     return ESP_OK;
@@ -100,13 +104,13 @@ ctl_disable(void) {
     esp_err_t err = gen_stop(current);
     if(err) {
         ESP_LOGE(TAG, "generator error: %d", err);
-        // continue anyway, we want to disable the offset
+        // continue anyway, we want to disable other stuff
     }
 
-    gpio_set_level(O_SIGNAL, 0);
-
     offset_disable();
-    gpio_set_level(O_SIGNAL, 1);
+    regulator_disable();
+
+    gpio_set_level(O_STATUS_LED, 0);
 
     g.is_enabled = false;
 

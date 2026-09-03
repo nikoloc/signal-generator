@@ -1,9 +1,14 @@
 #ifndef REGULATOR_H
 #define REGULATOR_H
 
-#include "util/ints.h"
+void
+regulator_init(void);
 
-float
-regulator_propose_next(float target, float prev, float meas);
+// target is in milivolts
+void
+regulator_enable(int target, int freq);
+
+void
+regulator_disable(void);
 
 #endif

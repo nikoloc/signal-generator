@@ -22,7 +22,9 @@ typedef enum ui_menu {
     UI_MENU_TYPE,
     UI_MENU_FREQ,
     UI_MENU_OFFSET,
+    UI_MENU_AMPL,
     UI_MENU_SYMMETRY,
+    _UI_MENU_INPUTS_START = UI_MENU_TYPE,
 } ui_menu_t;
 
 static struct g {
@@ -75,7 +77,9 @@ handle_digit_home(int d) {
 
         case 3: {
             if(g.type != CTL_SIGNAL_TYPE_NONE) {
-                g.menu = UI_MENU_OFFSET;
+                // g.menu = UI_MENU_OFFSET;
+                // temporary
+                g.menu = UI_MENU_AMPL;
             }
             break;
         }
@@ -128,6 +132,7 @@ handle_digit(int d) {
         }
         case UI_MENU_FREQ:
         case UI_MENU_OFFSET:
+        case UI_MENU_AMPL:
         case UI_MENU_SYMMETRY: {
             handle_digit_input(d);
             break;
@@ -158,27 +163,6 @@ print_decimal(void) {
     } else {
         lcd_printf(1, 0, ">%c%d.%d", sign, g.input.whole, g.input.frac);
     }
-    // if(g.input.is_zero) {
-    //     return;
-    // }
-    //
-    // if(g.input.whole == 0 && g.input.frac == 0) {
-    //     lcd_printf(1, 0, ">%c%s", (g.input.sign < 0) ? '-' : ' ');
-    //     return;
-    // }
-    //
-    // lcd_printf(1, 0, ">%c", (g.input.sign < 0) ? '-' : ' ');
-    //
-    // if(g.input.frac_count == 0) {
-    //     lcd_printf(1, 2, "%d%s", g.input.whole, (g.input.dot) ? "." : "");
-    // } else {
-    //     float value = g.input.whole + g.input.frac / pow(10, g.input.frac_count);
-    //     if(g.input.frac_count == 1) {
-    //         lcd_printf(1, 2, "%.1f", value);
-    //     } else {
-    //         lcd_printf(1, 2, "%.2f", value);
-    //     }
-    // }
 }
 
 void
@@ -193,8 +177,11 @@ ui_render(void) {
                 lcd_printf(1, 0, "2.freq:%d", g.params.freq);
             }
             if(g.type != CTL_SIGNAL_TYPE_NONE) {
-                lcd_printf(2, 0, "3.offs:%.2f", g.params.offset);
+                lcd_printf(2, 0, "3.ampl:%.2f", g.params.ampl);
             }
+            // if(g.type != CTL_SIGNAL_TYPE_NONE) {
+            //     lcd_printf(2, 0, "3.offs:%.2f", g.params.offset);
+            // }
             if(g.type == CTL_SIGNAL_TYPE_RECT || g.type == CTL_SIGNAL_TYPE_TRIANGLE) {
                 lcd_printf(3, 0, "4.sim:%.2f", g.params.symmetry);
             }
@@ -220,6 +207,13 @@ ui_render(void) {
             lcd_printf(0, 0, "type offset");
             print_decimal();
             lcd_printf(3, 0, "%d..%d", MIN_OFFSET, MAX_OFFSET);
+
+            break;
+        }
+        case UI_MENU_AMPL: {
+            lcd_printf(0, 0, "type amplitude");
+            print_decimal();
+            lcd_printf(3, 0, "%d..%d", MIN_AMPL, MAX_AMPL);
 
             break;
         }
@@ -260,6 +254,14 @@ handle_ok(void) {
             }
             break;
         }
+        case UI_MENU_AMPL: {
+            float value = float_input();
+            if(IN_RANGE(value, MIN_AMPL, MAX_AMPL)) {
+                g.params.ampl = value;
+                go_home();
+            }
+            break;
+        }
         case UI_MENU_SYMMETRY: {
             float value = float_input();
             if(IN_RANGE(value, 0, 1)) {
@@ -283,7 +285,7 @@ handle_enable(void) {
 
 static void
 handle_backslash(void) {
-    if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+    if(g.menu > _UI_MENU_INPUTS_START) {
         if(g.input.dot) {
             if(g.input.frac_count > 0) {
                 g.input.frac /= 10;
@@ -324,14 +326,14 @@ ui_handle_key(key_t key) {
             break;
         }
         case KEY_SIGN: {
-            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+            if(g.menu > _UI_MENU_INPUTS_START) {
                 g.input.sign *= -1;
             }
 
             break;
         }
         case KEY_DOT: {
-            if(g.menu == UI_MENU_FREQ || g.menu == UI_MENU_OFFSET || g.menu == UI_MENU_SYMMETRY) {
+            if(g.menu > _UI_MENU_INPUTS_START) {
                 g.input.dot = true;
             }
 

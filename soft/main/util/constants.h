@@ -2,8 +2,12 @@
 #define CONSTANTS_H
 
 #define VDD (3.3f)
+
 #define MAX_OFFSET (12)
 #define MIN_OFFSET (-12)
+
+#define MAX_AMPL (3)
+#define MIN_AMPL (0)
 
 // test these values
 #define MAX_SINE_FREQ (100000)

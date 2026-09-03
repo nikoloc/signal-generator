@@ -23,8 +23,9 @@
         }                                                                                  \
     } while(0)
 #else
-#define ASSERT(expr) \
-    do {             \
+#define ASSERT(expr)  \
+    do {              \
+        UNUSED(expr); \
     } while(0)
 #endif
 
